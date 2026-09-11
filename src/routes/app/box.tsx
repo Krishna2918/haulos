@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Megaphone, ArrowLeft, Users } from "lucide-react";
+import { Search, Megaphone, ArrowLeft, Users, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/desk/chips";
 import { useHaul } from "@/lib/haulos/store";
@@ -42,7 +42,6 @@ function Box() {
   const groups = useHaul((s) => s.boxGroups);
   const activity = useHaul((s) => s.boxActivity);
   const me = useHaul((s) => s.people.find((p) => p.id === s.personId));
-  const did = useHaul((s) => s.companyDid);
   const kill = useHaul((s) => s.kill);
   const send = useHaul((s) => s.sendMsg);
   const read = useHaul((s) => s.markThreadRead);
@@ -69,6 +68,7 @@ function Box() {
   const [showContact, setShowContact] = useState(false);
   const [castOpen, setCastOpen] = useState(false);
   const [groupsOpen, setGroupsOpen] = useState(false);
+  const [moreFilters, setMoreFilters] = useState(false);
   const [castGroups, setCastGroups] = useState<string[]>([]);
   const [castTags, setCastTags] = useState<string[]>([]);
   const [castBody, setCastBody] = useState("");
@@ -184,32 +184,44 @@ function Box() {
   const targets = targetsFor(castGroups, castTags);
 
   return (
-    <div className="flex h-[calc(100dvh-7rem)] min-h-[520px] flex-col gap-2">
-      <header className="flex flex-wrap items-center gap-2">
-        <div className="min-w-0 flex-1">
+    <div className="flex h-[calc(100dvh-7.25rem)] min-h-0 flex-col gap-3 overflow-hidden md:h-[calc(100dvh-7rem)] md:min-h-[520px]">
+      <header className="flex shrink-0 items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight">Box</h1>
-          <p className="text-xs text-muted">One shared SMS desk · {did} · {unreadTotal} unread</p>
+          <p className="mt-0.5 truncate whitespace-nowrap text-xs text-muted">
+            {unreadTotal} unread · shared SMS desk
+          </p>
         </div>
-        {canSend && (
-          <>
-            <Button variant="ghost" onClick={() => setGroupsOpen(true)}>
-              <Users className="size-4" />
-              Groups
-            </Button>
-            <Button variant="ghost" onClick={() => { setCastOpen(true); setCastSent(null); }}>
-              <Megaphone className="size-4" />
-              Mass broadcast
-            </Button>
-          </>
-        )}
-        <Button variant="quiet" onClick={reset}>
-          Reset desk
-        </Button>
+        <div className="flex shrink-0 items-center gap-1">
+          {canSend && (
+            <>
+              <Button variant="ghost" className="px-3" onClick={() => setGroupsOpen(true)}>
+                <Users className="size-4" />
+                Groups
+              </Button>
+              <Button
+                variant="ghost"
+                className="px-3"
+                onClick={() => {
+                  setCastOpen(true);
+                  setCastSent(null);
+                }}
+              >
+                <Megaphone className="size-4" />
+                <span className="hidden sm:inline">Mass broadcast</span>
+                <span className="sm:hidden">Cast</span>
+              </Button>
+            </>
+          )}
+          <Button variant="quiet" className="hidden px-2 text-xs md:inline-flex" onClick={reset}>
+            Reset desk
+          </Button>
+        </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 gap-2 lg:grid-cols-[300px_1fr] xl:grid-cols-[300px_1fr_260px]">
-        <aside className={cn("flex min-h-0 flex-col rounded-[var(--radius-md)] border border-line bg-raised", pane === "chat" && "hidden lg:flex")}>
-          <div className="border-b border-line p-3">
+      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-2 lg:grid-cols-[300px_1fr] xl:grid-cols-[300px_1fr_260px]">
+        <aside className={cn("flex min-h-0 flex-1 flex-col rounded-[var(--radius-md)] border border-line bg-raised", pane === "chat" && "hidden lg:flex")}>
+          <div className="shrink-0 border-b border-line p-3">
             <label className="relative block">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted" />
               <span className="sr-only">Search conversations</span>
@@ -221,71 +233,87 @@ function Box() {
                 onChange={(e) => setQ(e.target.value)}
               />
             </label>
-            <div className="mt-2 flex items-baseline justify-between gap-2">
+            <div className="mt-2 flex items-center justify-between gap-2">
               <p className="font-mono text-[11px] uppercase tracking-wide text-muted">Shared inbox</p>
               <p className="font-mono text-[11px] text-navy">
                 {unreadTotal} unread · {rows.length} shown
               </p>
             </div>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {groups.map((g) => {
-                const on = gF.includes(g.id);
-                return (
-                  <button key={g.id} type="button" onClick={() => setGF(on ? gF.filter((x) => x !== g.id) : [...gF, g.id])}>
-                    <Chip tone={on ? g.tone : "muted"}>{g.name}</Chip>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-2 grid grid-cols-2 gap-1">
-              <select className="min-h-10 rounded-[var(--radius-sm)] border border-line bg-paper px-2 text-xs" value={asg} onChange={(e) => setAsg(e.target.value)}>
-                <option value="all">Assigned · all</option>
-                <option value="me">Assigned · me</option>
-                <option value="unassigned">Unassigned</option>
-                {roster.filter((p) => p.id !== me?.id).map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name.split(" ")[0]}
-                  </option>
-                ))}
-              </select>
-              <select className="min-h-10 rounded-[var(--radius-sm)] border border-line bg-paper px-2 text-xs" value={readF} onChange={(e) => setReadF(e.target.value as typeof readF)}>
-                <option value="all">Read · any</option>
-                <option value="unread">Unread</option>
-                <option value="read">Read</option>
-              </select>
-              <select className="min-h-10 rounded-[var(--radius-sm)] border border-line bg-paper px-2 text-xs" value={stF} onChange={(e) => setStF(e.target.value as typeof stF)}>
-                <option value="all">Status · all</option>
-                {WORK.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.label}
-                  </option>
-                ))}
-              </select>
+            <div className="mt-2 flex items-center gap-1">
+              <div className="flex min-w-0 flex-1 flex-wrap gap-1">
+                {groups.map((g) => {
+                  const on = gF.includes(g.id);
+                  return (
+                    <button key={g.id} type="button" onClick={() => setGF(on ? gF.filter((x) => x !== g.id) : [...gF, g.id])}>
+                      <Chip tone={on ? g.tone : "muted"}>{g.name}</Chip>
+                    </button>
+                  );
+                })}
+              </div>
               <button
                 type="button"
-                className={cn("min-h-10 rounded-[var(--radius-sm)] border px-2 text-xs", today ? "border-navy bg-navy text-paper" : "border-line")}
-                onClick={() => setToday((v) => !v)}
+                className={cn(
+                  "inline-flex min-h-10 shrink-0 items-center gap-1 rounded-[var(--radius-sm)] border px-2.5 text-xs lg:hidden",
+                  moreFilters || filtersActive ? "border-navy bg-navy text-paper" : "border-line bg-paper",
+                )}
+                onClick={() => setMoreFilters((v) => !v)}
+                aria-expanded={moreFilters}
               >
-                Today
+                <SlidersHorizontal className="size-3.5" />
+                Filters
               </button>
             </div>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {TAGS.map((tag) => {
-                const on = tagF === tag;
-                return (
-                  <button key={tag} type="button" onClick={() => setTagF(on ? null : tag)}>
-                    <Chip tone={on ? "warn" : "muted"}>{tag}</Chip>
-                  </button>
-                );
-              })}
+            <div className={cn("mt-2 space-y-2", !moreFilters && "max-lg:hidden")}>
+              <div className="grid grid-cols-2 gap-1">
+                <select className="min-h-10 rounded-[var(--radius-sm)] border border-line bg-paper px-2 text-xs" value={asg} onChange={(e) => setAsg(e.target.value)}>
+                  <option value="all">Assigned · all</option>
+                  <option value="me">Assigned · me</option>
+                  <option value="unassigned">Unassigned</option>
+                  {roster.filter((p) => p.id !== me?.id).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name.split(" ")[0]}
+                    </option>
+                  ))}
+                </select>
+                <select className="min-h-10 rounded-[var(--radius-sm)] border border-line bg-paper px-2 text-xs" value={readF} onChange={(e) => setReadF(e.target.value as typeof readF)}>
+                  <option value="all">Read · any</option>
+                  <option value="unread">Unread</option>
+                  <option value="read">Read</option>
+                </select>
+                <select className="min-h-10 rounded-[var(--radius-sm)] border border-line bg-paper px-2 text-xs" value={stF} onChange={(e) => setStF(e.target.value as typeof stF)}>
+                  <option value="all">Status · all</option>
+                  {WORK.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className={cn("min-h-10 rounded-[var(--radius-sm)] border px-2 text-xs", today ? "border-navy bg-navy text-paper" : "border-line")}
+                  onClick={() => setToday((v) => !v)}
+                >
+                  Today
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {TAGS.map((tag) => {
+                  const on = tagF === tag;
+                  return (
+                    <button key={tag} type="button" onClick={() => setTagF(on ? null : tag)}>
+                      <Chip tone={on ? "warn" : "muted"}>{tag}</Chip>
+                    </button>
+                  );
+                })}
+              </div>
+              {filtersActive ? (
+                <button type="button" className="font-mono text-[11px] text-navy" onClick={clearFilters}>
+                  Clear filters · full inbox
+                </button>
+              ) : (
+                <p className="font-mono text-[10px] uppercase tracking-wide text-muted">Filters are views — one shared desk</p>
+              )}
             </div>
-            {filtersActive ? (
-              <button type="button" className="mt-2 font-mono text-[11px] text-navy" onClick={clearFilters}>
-                Clear filters · full inbox
-              </button>
-            ) : (
-              <p className="mt-2 font-mono text-[10px] uppercase tracking-wide text-muted">Filters are views — one shared desk</p>
-            )}
           </div>
           <ul className="min-h-0 flex-1 overflow-auto" role="listbox" aria-label="Conversations">
             {rows.length === 0 && <li className="p-4 text-sm text-muted">No threads match this view. Clear filters to see the full shared inbox.</li>}
@@ -348,50 +376,53 @@ function Box() {
             </div>
           ) : (
             <>
-              <header className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2">
-                <button className="grid size-11 place-items-center lg:hidden" onClick={() => setPane("list")} aria-label="Back to threads">
-                  <ArrowLeft className="size-4" />
-                </button>
-                <span className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-sm)] border border-line bg-paper font-mono text-[11px]">
-                  {initials(selected.person.name)}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold">{selected.person.name}</p>
-                  <p className="font-mono text-[11px] text-muted">
-                    {selected.person.phone}
-                    {selected.truck ? ` · ${selected.truck.unit}` : ""}
-                    {selected.truck ? ` · ${selected.truck.where}` : ` · ${selected.person.kind}`}
-                  </p>
+              <header className="shrink-0 border-b border-line">
+                <div className="flex items-center gap-2 px-3 py-2">
+                  <button className="grid size-11 shrink-0 place-items-center lg:hidden" onClick={() => setPane("list")} aria-label="Back to threads">
+                    <ArrowLeft className="size-4" />
+                  </button>
+                  <span className="grid size-9 shrink-0 place-items-center rounded-[var(--radius-sm)] border border-line bg-paper font-mono text-[11px]">
+                    {initials(selected.person.name)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold">{selected.person.name}</p>
+                    <p className="truncate font-mono text-[11px] text-muted">
+                      {selected.person.phone}
+                      {selected.truck ? ` · ${selected.truck.unit}` : ""}
+                    </p>
+                  </div>
+                  <Button variant="ghost" className="px-3 xl:hidden" onClick={() => setShowContact((v) => !v)}>
+                    Contact
+                  </Button>
+                  <Button variant="ghost" className="hidden px-3 md:inline-flex" onClick={() => inbound(selected.person.id)}>
+                    Simulate inbound
+                  </Button>
                 </div>
-                <Button variant="ghost" className="xl:hidden" onClick={() => setShowContact((v) => !v)}>
-                  Contact
-                </Button>
-                <Button variant="ghost" onClick={() => inbound(selected.person.id)}>
-                  Simulate inbound
-                </Button>
-                <select
-                  id="thread-status"
-                  className="min-h-11 rounded-[var(--radius-sm)] border border-line bg-paper px-2 text-xs"
-                  value={selected.t.status}
-                  disabled={!canSend}
-                  onChange={(e) => setStatus(selected.person.id, e.target.value as Workflow)}
-                >
-                  {WORK.map((w) => (
-                    <option key={w.id} value={w.id}>{w.label}</option>
-                  ))}
-                </select>
-                <select
-                  id="thread-assign"
-                  className="min-h-11 rounded-[var(--radius-sm)] border border-line bg-paper px-2 text-xs"
-                  value={selected.t.assignedTo ?? ""}
-                  disabled={!canSend}
-                  onChange={(e) => assign(selected.person.id, e.target.value || null)}
-                >
-                  <option value="">Unassigned</option>
-                  {roster.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+                <div className="grid grid-cols-2 gap-1 px-3 pb-2">
+                  <select
+                    id="thread-status"
+                    className="min-h-11 rounded-[var(--radius-sm)] border border-line bg-paper px-2 text-xs"
+                    value={selected.t.status}
+                    disabled={!canSend}
+                    onChange={(e) => setStatus(selected.person.id, e.target.value as Workflow)}
+                  >
+                    {WORK.map((w) => (
+                      <option key={w.id} value={w.id}>{w.label}</option>
+                    ))}
+                  </select>
+                  <select
+                    id="thread-assign"
+                    className="min-h-11 rounded-[var(--radius-sm)] border border-line bg-paper px-2 text-xs"
+                    value={selected.t.assignedTo ?? ""}
+                    disabled={!canSend}
+                    onChange={(e) => assign(selected.person.id, e.target.value || null)}
+                  >
+                    <option value="">Unassigned</option>
+                    {roster.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
               </header>
               {others.length > 0 && (
                 <p className="mx-3 mt-2 rounded-[var(--radius-sm)] border border-navy/30 bg-navy/10 px-3 py-2 font-mono text-[11px] text-navy" role="status">
@@ -462,7 +493,8 @@ function Box() {
                     onClick={() => setMode("sms")}
                     aria-pressed={mode === "sms"}
                   >
-                    SMS to driver
+                    <span className="sm:hidden">SMS</span>
+                    <span className="hidden sm:inline">SMS to driver</span>
                   </button>
                   <button
                     type="button"
@@ -470,9 +502,10 @@ function Box() {
                     onClick={() => setMode("note")}
                     aria-pressed={mode === "note"}
                   >
-                    Internal note
+                    <span className="sm:hidden">Note</span>
+                    <span className="hidden sm:inline">Internal note</span>
                   </button>
-                  <span className="self-center text-[11px] text-muted">
+                  <span className="hidden self-center text-[11px] text-muted sm:inline">
                     {!canSend
                       ? "Read-only — field seats reply from Phone"
                       : mode === "sms"
@@ -613,8 +646,11 @@ function Box() {
                 <GroupRow key={g.id} group={g} onRename={renameGroup} />
               ))}
             </ul>
-            <div className="mt-3 flex justify-end">
-              <Button variant="ghost" onClick={() => setGroupsOpen(false)}>Close</Button>
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <Button variant="quiet" className="text-xs md:hidden" onClick={reset}>
+                Reset desk
+              </Button>
+              <Button variant="ghost" className="ml-auto" onClick={() => setGroupsOpen(false)}>Close</Button>
             </div>
           </div>
         </div>

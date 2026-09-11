@@ -151,15 +151,15 @@ export function DeskShell() {
         </nav>
         <p className="px-3 py-2 text-[10px] text-muted">Preview · demo data · no live send</p>
       </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="flex items-center gap-2 border-b border-line bg-raised px-3 py-2">
-          <Link to="/app/today" className="font-semibold text-navy md:hidden">
+          <Link to="/app/today" className="shrink-0 font-semibold text-navy md:hidden">
             HaulOS
           </Link>
-          <label className="ml-auto text-[11px] text-muted">
-            Seat
+          <label className="ml-auto min-w-0 text-[11px] text-muted">
+            <span className="hidden md:inline">Seat</span>
             <select
-              className="ml-2 min-h-11 rounded-[var(--radius-sm)] border border-line bg-paper px-2 text-sm text-ink"
+              className="ml-0 min-h-11 max-w-[11rem] rounded-[var(--radius-sm)] border border-line bg-paper px-2 text-sm text-ink md:ml-2 md:max-w-none"
               value={personId}
               onChange={(e) => switchSeat(e.target.value)}
             >
@@ -171,20 +171,20 @@ export function DeskShell() {
             </select>
           </label>
           <button
-            className="grid size-11 place-items-center rounded-[var(--radius-sm)] border border-line"
+            className="grid size-11 shrink-0 place-items-center rounded-[var(--radius-sm)] border border-line"
             onClick={() => setTheme(theme === "day" ? "night" : "day")}
             aria-label="Theme"
           >
             {theme === "day" ? <Moon className="size-4" /> : <Sun className="size-4" />}
           </button>
         </header>
-        <main className="min-h-0 flex-1 overflow-auto p-4 pb-24 md:pb-6">
-          <p className="mb-3 text-xs text-muted">
+        <main className="min-h-0 flex-1 overflow-auto p-3 pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:p-4 md:pb-6">
+          <p className="mb-3 hidden truncate text-xs text-muted md:block">
             {me?.name} · {role} · {ROLE_LINE[role]} · {did}
           </p>
           <Outlet />
         </main>
-        <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-line bg-raised md:hidden">
+        <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t border-line bg-raised pb-[env(safe-area-inset-bottom)] md:hidden">
           {mobile.map((n) => (
             <Link
               key={n.to}
